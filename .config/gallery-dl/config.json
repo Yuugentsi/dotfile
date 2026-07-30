@@ -1,12 +1,16 @@
 {
   "extractor": {
-    "base-directory": "$HOME/0/pictures/gallery-dl",
+    "base-directory": "$HOME/0/videos/gallery-dl",
     "cookies-from-browser": "firefox",
-    "download-archive": "$HOME/.cache/gallery-dl/archive.sqlite3",
+    //"download-archive": "$HOME/.cache/gallery-dl/archive.sqlite3",
     "retries": 6,
 
     "danbooru": {
       "filename": "{id}.{extension}"
+    },
+
+    "erome": {
+      "filename": "{album_id}_{num}.{extension}"
     },
 
     "pinterest": {
@@ -15,6 +19,10 @@
 
     "reddit": {
       "filename": "{title}_{id}.{extension}"
+    },
+
+    "realbooru": {
+      "filename": "{id} - {uploader}.{extension}"
     },
 
     "sakugabooru": {

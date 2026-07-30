@@ -16,7 +16,7 @@
 
 # ─── output ───
 --continue
---download-archive ~/.cache/yt-dlp/archive.txt
+#--download-archive ~/.cache/yt-dlp/archive.txt
 --merge-output-format mp4
 --no-overwrites
 --no-playlist
