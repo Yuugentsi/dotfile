@@ -34,17 +34,18 @@ hl.window_rule({
 })
 
 -- opacity
--- hl.window_rule({ name = "zed-opacity", match = { class = "dev.zed.Zed" }, opacity = "0.90 0.88" })
--- hl.window_rule({ name = "firefox-opacity", match = { class = "firefox" }, opacity = "0.75 0.70" })
--- hl.window_rule({ name = "brave-opacity", match = { class = "(?i)brave.*" }, opacity = "0.82 0.62" })
--- hl.window_rule({ name = "zen-opacity", match = { class = "zen" }, opacity = "0.70 0.70" })
--- hl.window_rule({ name = "spotify-opacity", match = { class = "Spotify" }, opacity = "0.85 0.75" })
--- hl.window_rule({ name = "thunar-opacity", match = { class = "(?i)thunar" }, opacity = "0.80 0.80" })
--- hl.window_rule({ name = "code-oss-opacity", match = { class = "code-oss" }, opacity = "0.88 0.82" })
--- hl.window_rule({ name = "bitwarden-opacity", match = { class = "Bitwarden" }, opacity = "0.60 0.70" })
--- hl.window_rule({ name = "telegram-opacity", match = { class = "org.telegram.desktop" }, opacity = "0.75 0.70" })
--- hl.window_rule({ name = "kitty-opacity",     match = { class = "kitty" },              opacity = "0.80 0.80" })
--- hl.window_rule({ name = "zathura-opacity", match = { class = "(zathura|org\\.pwmt\\.zathura)" }, opacity = "0.88 0.80" })
+hl.window_rule({ name = "zed-opacity", match = { class = "dev.zed.Zed" }, opacity = "0.93 0.88" })
+hl.window_rule({ name = "firefox-opacity", match = { class = "firefox" }, opacity = "0.75 0.70" })
+hl.window_rule({ name = "brave-opacity", match = { class = "(?i)brave.*" }, opacity = "0.82 0.62" })
+hl.window_rule({ name = "chromium-opacity", match = { class = "chromium" }, opacity = "0.85 0.80" })
+hl.window_rule({ name = "zen-opacity", match = { class = "zen" }, opacity = "0.85 0.80" })
+hl.window_rule({ name = "spotify-opacity", match = { class = "Spotify" }, opacity = "0.85 0.75" })
+hl.window_rule({ name = "thunar-opacity", match = { class = "(?i)thunar" }, opacity = "0.85 0.80" })
+hl.window_rule({ name = "code-oss-opacity", match = { class = "code-oss" }, opacity = "0.88 0.82" })
+hl.window_rule({ name = "bitwarden-opacity", match = { class = "Bitwarden" }, opacity = "0.60 0.70" })
+hl.window_rule({ name = "telegram-opacity", match = { class = "org.telegram.desktop" }, opacity = "0.80 0.75" })
+hl.window_rule({ name = "kitty-opacity",     match = { class = "kitty" },              opacity = "0.80 0.80" })
+hl.window_rule({ name = "zathura-opacity", match = { class = "(zathura|org\\.pwmt\\.zathura)" }, opacity = "0.88 0.80" })
 
 -- rofi
 hl.window_rule({ name = "rofi-animation", match = { class = "rofi" }, animation = "popin" })
@@ -57,6 +58,18 @@ hl.window_rule({
     center      = true,
     size        = "700 500",
     opacity     = "0.92 override 0.92 override",
+    border_size = 0,
+})
+
+hl.window_rule({
+    name        = "zen-save-dialog",
+    match       = {
+        class = "^(zen|zen-browser)$",
+        title = ".*(Save|Opening|Upload|wants to save).*",
+    },
+    float       = true,
+    center      = true,
+    size        = "820 560",
     border_size = 0,
 })
 

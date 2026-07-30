@@ -34,6 +34,33 @@ open_all() {
     done
 }
 
+open_private() {
+    local url="$1"
+    case "$BROWSER" in
+        zen-browser|librewolf|firefox)
+            if [ -n "$url" ]; then
+                "$BROWSER" --private-window "$url" &>/dev/null &
+            else
+                "$BROWSER" --private-window &>/dev/null &
+            fi
+            ;;
+        brave-origin|brave|chromium|google-chrome|chrome)
+            if [ -n "$url" ]; then
+                "$BROWSER" --incognito "$url" &>/dev/null &
+            else
+                "$BROWSER" --incognito &>/dev/null &
+            fi
+            ;;
+        *)
+            if [ -n "$url" ]; then
+                "$BROWSER" "$url" &>/dev/null &
+            else
+                "$BROWSER" &>/dev/null &
+            fi
+            ;;
+    esac
+}
+
 _manga_rofi_menu() {
     rofi -dmenu -i -no-custom -selected-row 0 -format i \
         -theme-str '* { font: "JetBrainsMono Nerd Font Medium 10.5"; bg: rgba(12,4,8,0.75); bg-alt: rgba(255,255,255,0.05); bg-hover: rgba(200,90,120,0.25); fg: #ffe0ec; muted: #b898a8; accent: #f8b4c8; glow: rgba(248,180,200,0.5); }' \
@@ -200,10 +227,34 @@ handle_bang() {
     encoded=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))" "$query" 2>/dev/null || printf '%s' "$query")
 
     case "$bang" in
-        .youtube|.yt) "$BROWSER" "https://www.youtube.com/results?search_query=$encoded" ;;
-        .x|.twitter)   "$BROWSER" "https://x.com/search?q=$encoded&src=typed_query" ;;
-        .dan|.danbooru) "$BROWSER" "https://danbooru.donmai.us/posts?tags=$encoded&z=5" ;;
-        .lastfm|.last) "$BROWSER" "http://last.fm/user/$encoded" ;;
+        .youtube|.yt)
+            if [ -n "$query" ]; then
+                "$BROWSER" "https://www.youtube.com/results?search_query=$encoded"
+            else
+                "$BROWSER" "https://youtube.com"
+            fi
+            ;;
+        .x|.twitter)
+            if [ -n "$query" ]; then
+                "$BROWSER" "https://x.com/search?q=$encoded&src=typed_query"
+            else
+                "$BROWSER" "https://x.com"
+            fi
+            ;;
+        .dan|.danbooru)
+            if [ -n "$query" ]; then
+                "$BROWSER" "https://danbooru.donmai.us/posts?tags=$encoded&z=5"
+            else
+                "$BROWSER" "https://danbooru.donmai.us"
+            fi
+            ;;
+        .lastfm|.last)
+            if [ -n "$query" ]; then
+                "$BROWSER" "https://last.fm/user/$encoded"
+            else
+                "$BROWSER" "https://last.fm/user/yuugentsi"
+            fi
+            ;;
         .walltop|.wall) "$BROWSER" "https://wallhaven.cc/toplist" ;;
         .wallhot)       "$BROWSER" "https://wallhaven.cc/hot" ;;
         .github)
@@ -213,8 +264,99 @@ handle_bang() {
                 "$BROWSER" "https://github.com/yuugentsi"
             fi
             ;;
-        .git) "$BROWSER" "https://github.com/$encoded" ;;
-        .g) "$BROWSER" "https://www.google.com/search?q=$encoded" ;;
+        .git)
+            if [ -n "$query" ]; then
+                "$BROWSER" "https://github.com/$encoded"
+            else
+                "$BROWSER" "https://github.com/yuugentsi"
+            fi
+            ;;
+        .gh)
+            if [ -n "$query" ]; then
+                "$BROWSER" "https://github.com/$encoded"
+            else
+                "$BROWSER" "https://github.com/Yuugentsi?tab=repositories"
+            fi
+            ;;
+        .g)
+            if [ -n "$query" ]; then
+                "$BROWSER" "https://www.google.com/search?q=$encoded"
+            else
+                "$BROWSER" "https://google.com"
+            fi
+            ;;
+        .p) open_private "$query" ;;
+        .reddit)
+            if [ -n "$query" ]; then
+                "$BROWSER" "https://www.reddit.com/search/?q=$encoded"
+            else
+                "$BROWSER" "https://reddit.com"
+            fi
+            ;;
+        .r)
+            if [ -n "$query" ]; then
+                "$BROWSER" "https://www.reddit.com/r/$encoded"
+            else
+                "$BROWSER" "https://reddit.com"
+            fi
+            ;;
+        .pin)
+            if [ -n "$query" ]; then
+                "$BROWSER" "https://www.pinterest.com/search/pins/?q=$encoded"
+            else
+                "$BROWSER" "https://pinterest.com"
+            fi
+            ;;
+        .mpv) mpv "$query" &>/dev/null & ;;
+        .mp4) (hyprctl notify 5 2000 "rgb(a6e3a1)" "󰄬" && yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" -o "$HOME/videos/yt/%(title)s.%(ext)s" "$query" && hyprctl notify 5 3000 "rgb(a6e3a1)" "󰄬") &>/dev/null & ;;
+        .mp3) (hyprctl notify 5 2000 "rgb(a6e3a1)" "󰄬" && yt-dlp -x --audio-format mp3 -o "$HOME/music/yt/%(title)s.%(ext)s" "$query" && hyprctl notify 5 3000 "rgb(a6e3a1)" "󰄬") &>/dev/null & ;;
+        .dl) (hyprctl notify 5 2000 "rgb(a6e3a1)" "󰄬" && gallery-dl "$query" && hyprctl notify 5 3000 "rgb(a6e3a1)" "󰄬") &>/dev/null & ;;
+        .zed)
+            if [ -n "$query" ]; then
+                zeditor "$HOME/$query" &>/dev/null &
+            else
+                zeditor "$HOME" &>/dev/null &
+            fi
+            ;;
+        .ins) kitty -e sudo pacman -S --noconfirm "$query" &>/dev/null & ;;
+        .play) (pgrep -x mpv | xargs -r kill -9 2>/dev/null; sleep 0.1; /usr/bin/mpv --shuffle --no-video "$HOME/0/music"/**/*) &>/dev/null & ;;
+        .manga) (
+            MANGA_HISTORY="$HOME/.cache/scripts/manga/random_history.txt"
+            mkdir -p "$(dirname "$MANGA_HISTORY")"
+            all_manga=$(find "$HOME" -type d \( -path "*/\.*" -o -path "*/node_modules" -o -path "*/.cache" -o -path "*/.local" -o -path "*/.config" \) -prune -o -type f -iname "*.cbz" -print 2>/dev/null)
+            [[ -z "$all_manga" ]] && exit 0
+            unplayed=$(grep -Fxvf "$MANGA_HISTORY" <<< "$all_manga" 2>/dev/null)
+            [[ -z "$unplayed" ]] && : > "$MANGA_HISTORY" && unplayed="$all_manga"
+            manga=$(echo "$unplayed" | shuf -n 1)
+            echo "$manga" >> "$MANGA_HISTORY"
+            zathura "$manga" &>/dev/null &
+        ) &>/dev/null & ;;
+        .wallpaper|.wp) (
+            cache="$HOME/.cache/scripts/wallpapers"
+            mkdir -p "$cache"
+            wp=$(find "$HOME/0/pictures/wallpapers" -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" \) 2>/dev/null | shuf -n 1)
+            [[ -z "$wp" ]] && exit 1
+            cp -- "$wp" "$cache/current"
+            printf "splash = false\nipc = true\npreload = %s\nwallpaper = ,%s,cover\n" "$cache/current" "$cache/current" > "$cache/hyprpaper.conf"
+            pgrep -x hyprpaper >/dev/null || hyprpaper -c "$cache/hyprpaper.conf" &>/dev/null & sleep 0.5
+            hyprctl hyprpaper preload "$cache/current" &>/dev/null
+            hyprctl hyprpaper wallpaper ",$cache/current,cover" &>/dev/null
+            hyprctl hyprpaper unload unused &>/dev/null
+            hyprctl notify 5 2200 "rgb(cba6f7)" "󰄬 wallpaper set"
+        ) &>/dev/null & ;;
+        .wallpaperblur|.wpb) (
+            cache="$HOME/.cache/scripts/wallpapers"
+            mkdir -p "$cache"
+            wp=$(find "$HOME/0/pictures/wallpapers" -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" \) 2>/dev/null | shuf -n 1)
+            [[ -z "$wp" ]] && exit 1
+            magick "$wp" -scale 1920x1080^ -gravity center -extent 1920x1080 -blur 0x15 -modulate 60 "$cache/current"
+            printf "splash = false\nipc = true\npreload = %s\nwallpaper = ,%s,cover\n" "$cache/current" "$cache/current" > "$cache/hyprpaper.conf"
+            pgrep -x hyprpaper >/dev/null || hyprpaper -c "$cache/hyprpaper.conf" &>/dev/null & sleep 0.5
+            hyprctl hyprpaper preload "$cache/current" &>/dev/null
+            hyprctl hyprpaper wallpaper ",$cache/current,cover" &>/dev/null
+            hyprctl hyprpaper unload unused &>/dev/null
+            hyprctl notify 5 2200 "rgb(cba6f7)" "󰄬 wallpaper set (blur)"
+        ) &>/dev/null & ;;
     esac
 }
 
@@ -316,19 +458,16 @@ run_search_all() {
     pkill -x rofi 2>/dev/null
     sleep 0.1
 
-    local chosen
-    chosen=$(printf '❀  Search All (%s)' "$all_count" | rofi_menu "❀  Sites:" 1)
-    [[ -z "$chosen" ]] && exit 0
+    local all_choice
+    all_choice=$(printf '%s\n' "$all_entries" | rofi_menu "❀  All:")
+    [[ -z "$all_choice" ]] && exit 0
 
-    case "$chosen" in
+    case "$all_choice" in
         '.'*)
-            handle_bang "$chosen"
+            handle_bang "$all_choice"
             exit 0
             ;;
-        *"Search All ("*")")
-            local all_choice
-            all_choice=$(printf '%s\n' "$all_entries" | rofi_menu "❀  All:")
-            [[ -z "$all_choice" ]] && exit 0
+        *)
             open_site_choice "$all_choice"
             ;;
     esac
@@ -1227,8 +1366,18 @@ run_power_menu() {
     esac
 }
 
-chosen=$(printf '❀  Search All (%s)\n❀  Websites (%s)\n❀  Cfg (%s)\n❀  Mangas (%s)\n❀  Videos (%s)\n❀  Images (%s)\n❀  Files\n❀  Power' "$all_count" "$websites_count" "$config_count" "$manga_count" "$video_count" "$image_count" | rofi_menu "❀  tr:" 8)
+main_menu_items=()
+main_menu_items+=('❀  Search All ('"$all_count"')')
+main_menu_items+=('❀  Websites ('"$websites_count"')')
+main_menu_items+=('❀  Cfg ('"$config_count"')')
+[[ "$manga_count" -gt 0 ]] && main_menu_items+=('❀  Mangas ('"$manga_count"')')
+[[ "$video_count" -gt 0 ]] && main_menu_items+=('❀  Videos ('"$video_count"')')
+[[ "$image_count" -gt 0 ]] && main_menu_items+=('❀  Images ('"$image_count"')')
+main_menu_items+=('❀  Files')
+main_menu_items+=('❀  Power')
+chosen=$(printf '%s\n' "${main_menu_items[@]}" | rofi_menu "❀  tr:" "${#main_menu_items[@]}")
 case "$chosen" in
+    '.'*)  handle_bang "$chosen" ;;
     *Search*) run_search_all ;;
     *Websites*) run_websites_menu ;;
     *Cfg*) run_config_menu ;;

@@ -327,6 +327,22 @@ run_music_picker() {
             | cut -f2-
     )
 
+    local album_count
+    album_count=$(grep -c $'^album\t'"$artist"$'\t' "$CACHE_FILE" 2>/dev/null)
+    [[ -z "$album_count" ]] && album_count=0
+
+    if [[ "$album_count" -eq 1 ]]; then
+        local single_album
+        single_album=$(echo "$album_entries" | sed 's/^󰀥  //' | sed 's/ ([0-9]\+)$//')
+        run_mpv --shuffle --no-video "$MUSIC_DIR/$artist/$single_album"/* >/dev/null 2>&1 &
+        exit 0
+    fi
+
+    if [[ "$album_count" -eq 0 ]]; then
+        run_mpv --shuffle --no-video "$MUSIC_DIR/$artist"/* >/dev/null 2>&1 &
+        exit 0
+    fi
+
     local album
     local album_status=0
     if $is_virtual; then

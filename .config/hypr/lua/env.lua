@@ -1,9 +1,9 @@
 -- ─── env ───
 local env_vars = {
     -- cursor
-    XCURSOR_THEME                       = "Oxygen_Zion",
-    XCURSOR_SIZE                        = "5",
-    HYPRCURSOR_SIZE                     = "11",
+    XCURSOR_THEME                       = "Vanilla-DMZ",
+    XCURSOR_SIZE                        = "12",
+    HYPRCURSOR_SIZE                     = "1",
 
     -- session
     XDG_CURRENT_DESKTOP                 = "Hyprland",
@@ -31,8 +31,9 @@ end
 
 -- ─── theme ───
 local themes = {
-    ["org.gnome.desktop.interface gtk-theme"]  = "Materia-dark",
-    ["org.gnome.desktop.interface icon-theme"] = "Adwaita",
+    -- xcursor-vanilla-dmz | adapta-gtk-theme | obsidian-icon-theme
+    ["org.gnome.desktop.interface gtk-theme"]  = "Adapta-Nokto",
+    ["org.gnome.desktop.interface icon-theme"] = "Obsidian-Purple",
 }
 
 for key, val in pairs(themes) do

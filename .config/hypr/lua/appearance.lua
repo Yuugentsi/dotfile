@@ -1,6 +1,6 @@
 -- ─── appearance ───
---
 hl.config({ xwayland = { force_zero_scaling = true } })
+
 -- -------------------- general --------------------
 hl.config({
     general = {
@@ -36,11 +36,18 @@ hl.config({
 hl.config({
     scrolling = {
         fullscreen_on_one_column = true,
+        column_width = 0.97,
+        focus_fit_method = 0,
+        follow_focus = true,
+        follow_min_visible = 0.4,
+        explicit_column_widths = "0.333, 0.5, 0.667, 1.0",
+        wrap_focus = true,
+        wrap_swapcol = true,
+        direction = "right",
     },
 })
 
 -- -------------------- misc --------------------
-
 hl.config({
     misc = {
         force_default_wallpaper  = -1,
@@ -71,13 +78,10 @@ hl.config({
 
         -- ----- blur -----
         blur             = {
-            enabled      = true,
-            size     = 8,
-            passes   = 1,
-            noise    = 0.05,
-            contrast = 1.2,
-            vibrancy = 0.3,
-            popups   = true,
+            enabled   = true,
+            size      = 3,
+            passes    = 1,
+            vibrancy  = 0.1696,
         },
 
         -- ----- glow -----

@@ -1,26 +1,27 @@
 -- ─── keybinds ───
 local mainMod = "SUPER"
+
 -- ─── programs ───
 local terminal    = "kitty"
 local fileManager = "thunar"
-local browser     = "zen-browser"
+--local browser     = "zen-browser"
+local browser     = "brave-origin"
 local menu        = "rofi -show drun -show-icons"
 
 -- apps
 hl.bind(mainMod .. " + Q", hl.dsp.exec_cmd(terminal))
-hl.bind(mainMod .. " + T", hl.dsp.exec_cmd(fileManager))
+
+-- hl.bind(mainMod .. " + T", hl.dsp.exec_cmd(fileManager))
+hl.bind(mainMod .. " + T", hl.dsp.exec_cmd(fileManager, { float = true }))
+hl.bind(mainMod .. " + Z", hl.dsp.exec_cmd("bash -c 'pkill -x zed-editor 2>/dev/null; zeditor'"))
 hl.bind(mainMod .. " + F", hl.dsp.exec_cmd(browser))
-hl.bind("ALT + F", hl.dsp.exec_cmd(browser .. " -private-window"))
+--hl.bind("ALT + F", hl.dsp.exec_cmd(browser .. " -private-window"))
+hl.bind("ALT + F", hl.dsp.exec_cmd(browser .. " --incognito"))
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(menu))
-hl.bind(mainMod .. " + Escape", hl.dsp.exec_cmd("~/.config/hypr/scripts/websites.sh"))
-hl.bind(mainMod .. " + G", hl.dsp.exec_cmd("~/.config/hypr/scripts/music.sh"))
-hl.bind("ALT + G", hl.dsp.exec_cmd("~/.config/hypr/scripts/video.sh"))
-hl.bind(mainMod .. " + V", hl.dsp.exec_cmd("bash ~/.config/hypr/scripts/clipboard.sh"))
-hl.bind("ALT + V", hl.dsp.exec_cmd("bash ~/.config/hypr/scripts/clipboard.sh images"))
 
 -- ─── keybinds ───
 hl.bind(mainMod .. " + C", hl.dsp.window.close())
-hl.bind("ALT + C", hl.dsp.exec_cmd("bash -c 'pid=$(hyprctl activewindow -j | jq -r \".pid\"); [ -n \"$pid\" ] && kill -9 \"$pid\"'"))
+hl.bind("ALT + C", hl.dsp.window.kill())
 hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch 'hl.dsp.exit()'"))
 -- hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())
@@ -45,35 +46,19 @@ hl.bind(mainMod .. " + I", hl.dsp.exec_cmd("bash ~/.config/hypr/scripts/tr.sh"))
 hl.bind(mainMod .. " + N", hl.dsp.exec_cmd("swaync-client -t"))
 hl.bind(mainMod .. " + SHIFT + N", hl.dsp.exec_cmd("swaync-client -C && hyprctl notify -1 2000 0 '🔔 Notifications cleared'"))
 
--- focus
-hl.bind(mainMod .. " + left",  hl.dsp.focus({ direction = "left" }))
-hl.bind(mainMod .. " + right", hl.dsp.focus({ direction = "right" }))
-hl.bind(mainMod .. " + up",    hl.dsp.focus({ direction = "up" }))
-hl.bind(mainMod .. " + down",  hl.dsp.focus({ direction = "down" }))
+-- screenshots
+local shot_region = "hyprshot -m region -z -t 500 -o $HOME/0/pictures/screenshots -f $(date +'%H-%M-%S_%m-%d-%Y').png"
+local shot_output = "hyprshot -m output -m active -z -t 500 -o $HOME/0/pictures/screenshots -f $(date +'%H-%M-%S_%m-%d-%Y').png"
 
--- workspaces
-for i = 1, 10 do
-    local key = i % 10
-    hl.bind(mainMod .. " + " .. key,         hl.dsp.focus({ workspace = i }))
-    hl.bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i }))
-end
+hl.bind("F4",     hl.dsp.exec_cmd(shot_region))
+hl.bind("ALT + F4", hl.dsp.exec_cmd(shot_output))
 
--- special workspace
-hl.bind(mainMod .. " + S",         hl.dsp.workspace.toggle_special("magic"))
-hl.bind(mainMod .. " + SHIFT + S", hl.dsp.window.move({ workspace = "special:magic" }))
-
--- mouse
-hl.bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }))
-hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }))
-hl.bind(mainMod .. " + mouse:272",  hl.dsp.window.drag(),   { mouse = true })
-hl.bind(mainMod .. " + mouse:273",  hl.dsp.window.resize(), { mouse = true })
-
--- scrolling
-hl.bind(mainMod .. " + period",         hl.dsp.layout("move +col"))
-hl.bind(mainMod .. " + comma",          hl.dsp.layout("move -col"))
-hl.bind(mainMod .. " + SHIFT + period", hl.dsp.layout("swapcol r"))
-hl.bind(mainMod .. " + SHIFT + comma",  hl.dsp.layout("swapcol l"))
-hl.bind(mainMod .. " + p",              hl.dsp.layout("promote"))
+-- float small
+hl.bind("F10", function()
+    hl.dispatch(hl.dsp.window.float({ action = "toggle" }))
+    hl.dispatch(hl.dsp.window.resize({ x = 900, y = 600 }))
+    hl.dispatch(hl.dsp.window.center())
+end)
 
 -- audio
 local vol_mute = "bash -c 'wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle; state=$(wpctl get-volume @DEFAULT_AUDIO_SINK@ | grep -q MUTED && echo \"󰖁\" || echo \"\"); hyprctl dismissnotify 1; hyprctl notify -1 2000 \"rgb(ff3333)\" \"fontsize:18 $state\"'"
@@ -109,22 +94,51 @@ hl.bind("ALT + K", hl.dsp.exec_cmd("playerctl next"),       { locked = true })
 hl.bind("ALT + J", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("ALT + H", hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
 
+hl.bind("insert", hl.dsp.exec_cmd("bash -c 'url=$(playerctl metadata --format \"{{xesam:url}}\" 2>/dev/null); if [ -n \"$url\" ]; then title=$(playerctl metadata --format \"{{title}}\" 2>/dev/null); printf \"%s\" \"$url\" | wl-copy; hyprctl notify -1 3000 \"rgb(cba6f7)\" \"fontsize:18 󰖟 ${title:-link}\"; fi'"), { locked = true })
 hl.bind("F1",             hl.dsp.exec_cmd("playerctl next"),       { locked = true })
+hl.bind("ALT + F1", hl.dsp.exec_cmd("bash -c 'pkill -x mpv 2>/dev/null; sleep 0.1; track=$(find $HOME/0/music -type f \\( -iname \"*.mp3\" -o -iname \"*.flac\" -o -iname \"*.ogg\" -o -iname \"*.opus\" -o -iname \"*.m4a\" \\) 2>/dev/null | shuf -n1); [ -n \"$track\" ] && mpv --no-video \"$track\" >/dev/null 2>&1 &'"), { locked = true })
 hl.bind("XF86AudioNext",  hl.dsp.exec_cmd("playerctl next"),       { locked = true })
 hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioPlay",  hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioPrev",  hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
 
--- screenshots
-local shot_region = "hyprshot -m region -z -t 500 -o $HOME/0/pictures/screenshots -f $(date +'%H-%M-%S_%m-%d-%Y').png"
-local shot_output = "hyprshot -m output -m active -z -t 500 -o $HOME/0/pictures/screenshots -f $(date +'%H-%M-%S_%m-%d-%Y').png"
+hl.bind(mainMod .. " + Escape", hl.dsp.exec_cmd("~/.config/hypr/scripts/websites.sh"))
+hl.bind(mainMod .. " + G", hl.dsp.exec_cmd("~/.config/hypr/scripts/music.sh"))
+hl.bind("ALT + G", hl.dsp.exec_cmd("~/.config/hypr/scripts/video.sh"))
+hl.bind("ALT + E", hl.dsp.exec_cmd("bash ~/.config/hypr/scripts/utils.sh switcher"))
+hl.bind(mainMod .. " + V", hl.dsp.exec_cmd("bash ~/.config/hypr/scripts/clipboard.sh"))
+hl.bind("ALT + V", hl.dsp.exec_cmd("bash ~/.config/hypr/scripts/clipboard.sh images"))
 
-hl.bind("F4",     hl.dsp.exec_cmd(shot_region))
-hl.bind("ALT + F4", hl.dsp.exec_cmd(shot_output))
+-- focus
+hl.bind(mainMod .. " + up",    hl.dsp.focus({ direction = "up" }))
+hl.bind(mainMod .. " + down",  hl.dsp.focus({ direction = "down" }))
 
--- float small
-hl.bind("F10", function()
-    hl.dispatch(hl.dsp.window.float({ action = "toggle" }))
-    hl.dispatch(hl.dsp.window.resize({ x = 900, y = 600 }))
-    hl.dispatch(hl.dsp.window.center())
-end)
+-- mouse
+hl.bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }))
+hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }))
+hl.bind(mainMod .. " + mouse:272",  hl.dsp.window.drag(),   { mouse = true })
+hl.bind(mainMod .. " + mouse:273",  hl.dsp.window.resize(), { mouse = true })
+
+-- scrolling columns
+hl.bind(mainMod .. " + left",  hl.dsp.layout("move -col"))
+hl.bind(mainMod .. " + right", hl.dsp.layout("move +col"))
+
+hl.bind("CTRL + apostrophe", hl.dsp.focus({ workspace = "m+1" }))
+
+-- scrolling
+hl.bind(mainMod .. " + period",         hl.dsp.layout("move +col"))
+hl.bind(mainMod .. " + comma",          hl.dsp.layout("move -col"))
+hl.bind(mainMod .. " + SHIFT + period", hl.dsp.layout("swapcol r"))
+hl.bind(mainMod .. " + SHIFT + comma",  hl.dsp.layout("swapcol l"))
+hl.bind(mainMod .. " + p",              hl.dsp.layout("promote"))
+
+-- special workspace
+hl.bind(mainMod .. " + S",         hl.dsp.workspace.toggle_special("magic"))
+hl.bind(mainMod .. " + SHIFT + S", hl.dsp.window.move({ workspace = "special:magic" }))
+
+-- workspaces
+for i = 1, 10 do
+    local key = i % 10
+    hl.bind(mainMod .. " + " .. key,         hl.dsp.focus({ workspace = i }))
+    hl.bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i }))
+end

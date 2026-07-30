@@ -11,10 +11,12 @@ hl.on("hyprland.start", function()
     exec("swaync")
     exec("hypridle")
     exec("spotify")
+    --
     exec("kitty opencode --continue")
     exec("bash ~/.config/hypr/scripts/clipboard.sh daemon")
     exec("bash ~/.config/hypr/scripts/wallpaper.sh daemon")
     exec("bash ~/.config/hypr/scripts/utils.sh workspace")
+    exec("fish -c mp3")
 
     -- ----- xdg desktop portal -----
 
@@ -57,12 +59,14 @@ hl.on("window.open", function(w)
     end
 end)
 
-
 -- ----- shutdown cleanup -----
 hl.on("hyprland.shutdown", function()
     local function exec(cmd)
         hl.exec_cmd(cmd)
     end
+    exec("pkill -x kitty")
+    exec("pkill -x zen")
+    exec("pkill -x brave-origin")
     exec("pkill -x hypridle")
     exec("pkill -x hyprpaper")
     exec("pkill -x swaync")
