@@ -6,9 +6,14 @@
 # ytp
 # --
 
-# config: set to false to disable mp3 thumbnail embedding
+#
 if not set -q YT_MP3_THUMBNAIL
     set -g YT_MP3_THUMBNAIL true
+end
+
+#
+if not set -q YTA_CLEAN_TITLE
+    set -g YTA_CLEAN_TITLE true
 end
 
 function __yt_mp3_thumbnail_flags --description 'Return thumbnail flags if enabled'
@@ -22,7 +27,10 @@ function __yt_mp3_thumbnail_flags --description 'Return thumbnail flags if enabl
 end
 
 function __yt_browser_cookies --description 'Detect browser cookies for yt-dlp'
-    if test -d "$HOME/.config/BraveSoftware/Brave-Origin"
+    if test -d "$HOME/.config/zen"
+        echo --cookies-from-browser
+        echo firefox:$HOME/.config/zen/
+    else if test -d "$HOME/.config/BraveSoftware/Brave-Origin"
         echo --cookies-from-browser
         echo brave:$HOME/.config/BraveSoftware/Brave-Origin
     else if test -d "$HOME/.config/BraveSoftware/Brave-Browser"
@@ -43,6 +51,7 @@ function __yt_browser_cookies --description 'Detect browser cookies for yt-dlp'
     end
 end
 
+# ─── mp3
 function mp3 --description 'yt mp3'
     set -l out_dir "$HOME/0/music/yt"
     mkdir -p "$out_dir"
@@ -103,6 +112,11 @@ function mp3 --description 'yt mp3'
                 (__yt_mp3_thumbnail_flags) \
                 --no-playlist \
                 --no-download-archive \
+                --replace-in-metadata "uploader" " - Topic\$" "" \
+                --parse-metadata "uploader:%(artist)s" \
+                --parse-metadata "uploader:%(album_artist)s" \
+                --replace-in-metadata "title" "(?i)\\s*[\\(\\[]?(?:feat|ft)\\.?\\s*[\\)\\]]?.*\$" "" \
+                --add-metadata \
                 --quiet \
                 --no-warnings \
                 --newline \
@@ -265,7 +279,8 @@ function mp3 --description 'yt mp3'
         sleep 0.15
     end
 end
-#
+
+# ─── mp4
 function mp4 --description 'yt mp4'
     set -l out_dir "$HOME/0/music/yt"
     mkdir -p "$out_dir"
@@ -448,7 +463,8 @@ function mp4 --description 'yt mp4'
         sleep 0.15
     end
 end
-#
+
+# ─── yt
 function yt
     set -l CHANNEL_NAME_IN_FILENAME true
     set -l MP3_DIR "$HOME/0/music/yt"
@@ -589,7 +605,8 @@ function yt
     functions -e __yt_download
     functions -e __yt_queue_count
 end
-#
+
+# ─── ytl
 function ytl
     set -l CHANNEL_NAME_IN_FILENAME true
 
@@ -700,7 +717,8 @@ function __extra_cnf
     clear; echo -s $G "$title 󰄬" $N
     return 0
 end
-#
+
+# ─── ytp
 function ytp --description 'yt mp3 clip'
     set -l out_dir "$HOME/0/music/yt"
     mkdir -p "$out_dir"
@@ -827,4 +845,78 @@ function ytp --description 'yt mp3 clip'
 
         sleep 0.15
     end
+end
+
+# ─── yta
+function yta -d "yt album/playlist downloader"
+    set -l url
+    if test -n "$argv[1]"
+        set url "$argv[1]"
+    else
+        if not command -v wl-paste >/dev/null 2>&1
+            echo "yta: wl-paste not found"
+            return 1
+        end
+        set url (wl-paste -n 2>/dev/null | string trim)
+    end
+
+    if not string match -qr '^https?://(www\.|music\.)?(youtube\.com|youtu\.be)/' -- "$url"
+        echo "yta: no valid youtube link"
+        return 1
+    end
+
+    if not command -v yt-dlp >/dev/null 2>&1
+        echo "yta: yt-dlp not found"
+        return 1
+    end
+
+    set -l out_dir "$HOME/0/music/yt"
+    mkdir -p "$out_dir"
+
+    set -l clean_title_arg
+    if test "$YTA_CLEAN_TITLE" = true
+        set -a clean_title_arg --replace-in-metadata
+        set -a clean_title_arg title
+        set -a clean_title_arg '(?i)\\s*[\\(\\[]?(?:feat|ft)\\.?\\s*[\\)\\]]?.*$'
+        set -a clean_title_arg ''
+    end
+
+    set -l tmpfile "/tmp/yta_files_$fish_pid"
+    rm -f "$tmpfile"
+
+    yt-dlp --no-config \
+        (__yt_browser_cookies) \
+        -x \
+        --audio-format mp3 \
+        --audio-quality 0 \
+        (__yt_mp3_thumbnail_flags) \
+        --replace-in-metadata "uploader" " - Topic\$" "" \
+        $clean_title_arg \
+        --parse-metadata "playlist_index:%(track_number)s" \
+        --parse-metadata "uploader:%(artist)s" \
+        --parse-metadata "uploader:%(album_artist)s" \
+        --add-metadata \
+        --yes-playlist \
+        --no-video \
+        --print-to-file after_move:filepath "$tmpfile" \
+        -o "$out_dir/%(uploader)s/%(album)s/%(title)s.%(ext)s" \
+        "$url"
+
+    set -l code $status
+
+    if test "$YTA_CLEAN_TITLE" = true; and test -f "$tmpfile"
+        for filepath in (cat "$tmpfile")
+            set -l title (ffprobe -v error -show_entries format_tags=title -of default=noprint_wrappers=1 "$filepath" 2>/dev/null | string replace -r '^TAG:title=' '')
+            set -l clean (string replace -ri '(?i)\s*[\(\[]?(?:feat|ft)\.?\s*[\)\]]?.*$' '' -- "$title")
+            if test "$title" != "$clean"; and test -n "$clean"
+                ffmpeg -loglevel quiet -y -i "$filepath" -c copy -metadata title="$clean" "$filepath.tmp.mp3"
+                if test $status -eq 0
+                    mv -f "$filepath.tmp.mp3" "$filepath"
+                end
+            end
+        end
+    end
+
+    rm -f "$tmpfile"
+    return $code
 end

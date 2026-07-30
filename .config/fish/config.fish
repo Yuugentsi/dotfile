@@ -1,34 +1,19 @@
-# ───────── config ─────────
-# │
-# ├── abbr
-# │   └── c    clear
-# │
-# ├── mkcd     mkdir + cd
-# ├── rd       rm -rf current dir
-# ├── empty    delete empty dirs
-# ├── zipast   zip current dir
-# ├── dt       date & time
-# ├── min      minutes to next hour
-# ├── volume   set audio volume
-# │
-# ├── bak      backup dir to bak/
-# │
-# ├── pw       copy pwd to clipboard
-# │
-# ├── prompt   custom prompt
-# └── zoxide   smart cd
+if status is-interactive
+end
 
 set -g fish_greeting
 
-# ── path
-fish_add_path ~/.local/bin
+# ── functions
+for f in ~/.config/fish/functions/*.fish
+    source $f
+end
 
 # ── prompt
 set -g fish_transient_prompt 1
 
-function fish_prompt -d "custom prompt"
+function fish_prompt
     if set -q argv[1]
-        echo -n "ᗧ "
+        echo -n "❯ "
         return
     end
 
@@ -43,64 +28,30 @@ function fish_prompt -d "custom prompt"
     string match -q "$HOME" "$PWD"; and set pwd "~"
 
     set -l DIM (set_color 7c5cbf)
-    set -l DIR (set_color a89cc8 --bold)
+    set -l DIR (set_color c8b8de --bold)
     set -l N (set_color normal)
 
-    echo -s "$DIM╭─$N $DIR $pwd$N"
-    echo -n -s "$DIM╰─$N " (set_color $status_color --bold) "ᗧ " (set_color normal)
+    echo -s "$DIM●$N $DIR$pwd$N"
+    echo -n -s "$DIM╰─$N " (set_color $status_color --bold) "❯ " (set_color normal)
 end
 
-# ── zoxide
+alias pwd="command pwd | wl-copy; and command pwd"
+alias myip="echo -n 'IP:  '; ip -4 -o a show | awk '/inet / && !/127.0.0.1/{print \$4}' | cut -d/ -f1 | head -1; echo -n 'DNS: '; awk '/^nameserver/{print \$2}' /etc/resolv.conf | head -1"
+alias f="rg -l . | fzf"
+
+# ─────────── zoxide ───────────
 if command -q zoxide
     zoxide init fish | source
 end
-
-# ─────────── syntax highlight ───────────
-set -g fish_color_normal cdd6f4
-set -g fish_color_command 89b4fa
-set -g fish_color_keyword cba6f7
-set -g fish_color_quote a6e3a1
-set -g fish_color_redirection fab387
-set -g fish_color_end f5c2e7
-set -g fish_color_error f38ba8 --bold
-set -g fish_color_param cdd6f4
-set -g fish_color_valid_path --underline
-set -g fish_color_option f9e2af
-set -g fish_color_comment 6c7086
-set -g fish_color_selection --background=585b70
-set -g fish_color_operator f5c2e7
-set -g fish_color_escape f5c2e7
-set -g fish_color_autosuggestion 585b70
-set -g fish_color_cwd 89b4fa
-set -g fish_color_cwd_root f38ba8
-set -g fish_color_user a6e3a1
-set -g fish_color_host 89b4fa
-set -g fish_color_host_remote f9e2af
-set -g fish_color_status f38ba8
-set -g fish_color_cancel f5c2e7
-set -g fish_color_search_match --background=585b70
-set -g fish_color_history_current 94e2d5
-
-# ── pager
-set -g fish_pager_color_progress cba6f7
-set -g fish_pager_color_prefix 89b4fa
-set -g fish_pager_color_completion cdd6f4
-set -g fish_pager_color_description 6c7086
-set -g fish_pager_color_selected_background 313244
-set -g fish_pager_color_selected_prefix b4befe
-set -g fish_pager_color_selected_completion cdd6f4
-set -g fish_pager_color_selected_description a6adc8
-set -g fish_pager_color_secondary_background 1e1e2e
-set -g fish_pager_color_secondary_prefix 89b4fa
-set -g fish_pager_color_secondary_completion cdd6f4
-set -g fish_pager_color_secondary_description 6c7086
-
-# ── functions
-for f in ~/.config/fish/functions/*.fish
-    source $f
+# ─────────── fzf ───────────
+if command -q fzf
+    fzf --fish | source
 end
 
-abbr -a c clear
+# ── player
+function player -d ""
+    python3 (find ~ -name "player.py" -not -path "*/.cache/*" -not -path "*/.local/*" -not -path "*/.venv/*" 2>/dev/null | head -1) $argv
+end
 
 # ── mkcd
 function mkcd -d "mkdir and cd"
@@ -111,9 +62,33 @@ end
 function rd -d "remove current dir"
     clear
     set -l p (pwd)
+
+    if test "$p" = /; or test "$p" = /home; or test "$p" = $HOME
+        set_color red; echo "refuse to remove protected dir: $p"; set_color normal
+        return 1
+    end
+
     cd ..
-    read -l -P "󰅙 rm -rf $p ? [y/N] " confirm
-    test "$confirm" = y; and rm -rf $p; and clear; and echo "󰄬 deleted $p"
+    read -l -P "rm -rf $p ? [y/N] " confirm
+    test "$confirm" = y; and rm -rf $p; and clear; and echo "deleted $p"
+end
+
+# ─────────── chmod ───────────
+function chmod -d "chmod +x on .sh files"
+    if test (count $argv) -eq 0
+        set -l sh (find (pwd) -maxdepth 1 -name "*.sh" -type f)
+        if test (count $sh) -gt 0
+            command chmod +x $sh
+            for f in $sh
+                set_color --dim
+                echo -n "  → "
+                set_color normal
+                echo (basename $f)
+            end
+        end
+    else
+        command chmod -R $argv (pwd)
+    end
 end
 
 # ── empty
@@ -123,61 +98,115 @@ function empty -d "delete empty dirs"
     echo "$n folders deleted"
 end
 
-# ── zipast
-function zipast -d "zip current dir"
-    zip -r (basename $PWD).zip . > /dev/null
-    clear
-    du -h (basename $PWD).zip
+# ─────────── zips-extract ───────────
+function zips -d "compression menu"
+    set -l P (set_color cba6f7)
+    set -l G (set_color a6e3a1)
+    set -l Y (set_color yellow)
+    set -l B (set_color 89b4fa)
+    set -l D (set_color brblack)
+    set -l N (set_color normal)
+
+    echo "$D󰗄 Zip$N"
+    echo "  [1] $Y󰛫 zip into one$N"
+    echo "  [2] $P󰉓 zip separately$N"
+    echo "  [3] $B󰃨 extract here$N"
+    read -P "→ " choice
+
+    switch $choice
+        case 1
+            clear
+            set -l current (basename "$PWD")
+            set -l subdirs (find . -maxdepth 1 -mindepth 1 -type d 2>/dev/null)
+
+            if test -z "$subdirs"
+                echo "zips: no subdirectories to zip here"
+                return 1
+            end
+
+            set -l archive "$current.zip"
+            rm -f "$archive"
+            __zips_progress "$archive" $subdirs
+
+        case 2
+            clear
+            set -l subdirs (find . -maxdepth 1 -mindepth 1 -type d 2>/dev/null)
+
+            if test -z "$subdirs"
+                echo "zips: no subdirectories to zip here"
+                return 1
+            end
+
+            for dir in $subdirs
+                set -l name (basename "$dir")
+                set -l archive "$name.zip"
+                rm -f "$archive"
+                __zips_progress "$archive" "$dir"
+            end
+
+        case 3
+            clear
+            extract
+
+        case 0 ''
+            return 0
+    end
 end
 
-# ── dt
-function dt -d "date and time"
-    clear
-    set -l now (date '+%s')
-    set -l midnight (date -d 'tomorrow 00:00:00' '+%s')
-    set -l left (math -s0 "$midnight - $now")
-    set -l h (math -s0 "$left / 3600")
-    set -l m (math -s0 "($left % 3600) / 60")
-    printf "󰔚 %s - 󰑔 %s - 󰕑 %sh%sm\n" (date '+%H:%M:%S') (date '+%m/%d/%Y') $h $m
+# ─── extract
+function extract -d "unzip all archives"
+    set -l archives (find . -maxdepth 1 -type f -name "*.zip" 2>/dev/null)
+
+    if test -z "$archives"
+        echo "extract: no zip files found here"
+        return 1
+    end
+
+    for z in $archives
+        set -l name (basename "$z" .zip)
+        mkdir -p "$name"
+        unzip -qo "$z" -d "$name"
+        set -l files (find "$name" -type f | wc -l | string trim)
+        echo "extracted: $z -> $name/ ($files files)"
+    end
 end
 
-# ── min
-function min -d "minutes to next hour"
-    set -l n (date +%s)
-    set -l h (date +%H)
-    set -l nx (math "$h + 1")
-    set -l nxh (date -d "$nx:00:00" +%s)
-    set -l l (math "$nxh - $n")
-    set -l m (math -s0 "$l / 60")
-    set -l s (math -s0 "$l % 60")
-    clear
-    echo "󰔚 $m min $s sec"
-end
+function __zips_progress -d "zip with progress"
+    if test (count $argv) -lt 2
+        return 1
+    end
 
-# ── volume
-function volume -d "set audio volume"
-    clear
-    set -q argv[1]; and set p $argv[1]; or set p 100
-    wpctl set-volume @DEFAULT_AUDIO_SINK@ (math "min(max($p, 30), 110) / 100")
-end
+    set -l archive $argv[1]
+    set -l targets $argv[2..-1]
+    set -l cols (tput cols)
+    set -l max (math $cols - 4)
 
-# ── pw
-function pw -d "copy pwd to clipboard"
-    echo -n "'"(pwd)"'" | wl-copy
-end
+    zip -r "$archive" $targets | while read -l line
+        set -l item (string match -rg 'adding: (.+) \(' -- "$line")
+        if test -n "$item"
+            set -l truncated (string sub -l $max -- "$item")
+            printf "\r\033[K󰗄 %s" "$truncated"
+        end
+    end
 
-# ── gcbz
-function gcbz -d "gallery-dl --cbz"
-    gallery-dl --cbz $argv
+    if test $pipestatus[1] -eq 0
+        printf "\r\033[K"
+        set -l size (du -h "$archive" | cut -f1)
+        echo "󰄬 $archive ($size)"
+    else
+        printf "\r\033[K"
+        echo "󰅙"
+        return 1
+    end
 end
 
 # ── venv
+function py; test -z "$VIRTUAL_ENV"; and venv; python3 (test -n "$argv"; and echo $argv; or echo main.py); end
 function venv -d "toggle python venv"
     set -l green (set_color green)
     set -l red (set_color red)
     set -l reset (set_color normal)
     set -l env "$HOME/.venv"
-
     if test -n "$VIRTUAL_ENV"
         deactivate
         clear
@@ -187,24 +216,11 @@ function venv -d "toggle python venv"
             python3 -m venv "$env"
         end
         source "$env/bin/activate.fish"
+        if test -f requirements.txt
+            echo -s $green "  installing requirements.txt..." $reset
+            pip install -q -r requirements.txt
+        end
         clear
         echo -s $green "󰄬 venv on" $reset
     end
-end
-
-if status is-interactive
-end
-
-# ── bak
-function bak -d "backup dir to bak/"
-    set -l d (pwd)
-    if set -q argv[1]
-        set d (realpath "$argv[1]")
-    end
-    mkdir -p "$d/bak"
-    for f in "$d"/*
-        test "$f" != "$d/bak"; and cp -r "$f" "$d/bak/"
-    end
-    clear
-    and echo "󰄬 $d/bak"
 end

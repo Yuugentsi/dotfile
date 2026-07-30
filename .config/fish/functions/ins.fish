@@ -1,11 +1,6 @@
 # ─────────── pkg ───────────
 function ins --description 'Unified package manager'
     set -g PKG_PREVIEW true
-    set -g PKG_SHOW_ALL true
-    set -g PKG_SHOW_PACMAN true
-    set -g PKG_SHOW_YAY true
-    set -g PKG_SHOW_UPDATE true
-    set -g PKG_SHOW_UNINSTALL true
 
     function __pkg_color -a color text bg
         if test -n "$bg"
@@ -110,33 +105,6 @@ function ins --description 'Unified package manager'
         end
     end
 
-    function __pkg_main_menu
-        test "$PKG_SHOW_ALL" = true; and echo "󰏗  All Repositories"
-        test "$PKG_SHOW_PACMAN" = true; and echo "󰮯  Pacman"
-        test "$PKG_SHOW_YAY" = true; and echo "󰣇  Yay"
-        test "$PKG_SHOW_UPDATE" = true; and echo "󰇚  Update"
-        test "$PKG_SHOW_UNINSTALL" = true; and echo "󰅙  Uninstall"
-    end
-
-    function __pkg_pacman_menu -a FZF_COLORS
-        set -l pkgs (
-            pacman -Sl | awk '!/\[installed\]$/ {print $2}' | fzf --multi \
-                $FZF_COLORS \
-                (__pkg_preview pacman) \
-                --height 60% \
-                --layout reverse \
-                --border rounded \
-                --prompt="󰮯 Pacman > " \
-                --pointer="" \
-                --marker="󰄬"
-        )
-
-        if test -n "$pkgs"
-            __pkg_selected "PACKAGES SELECTED" cc7832 6a8759 $pkgs
-            sudo pacman -S --noconfirm --color=always $pkgs
-        end
-    end
-
     function __pkg_yay_menu -a FZF_COLORS cache_file
         __pkg_need_yay; or return 1
         __pkg_aur_cache "$cache_file"
@@ -201,74 +169,88 @@ function ins --description 'Unified package manager'
         return
     end
 
-    set -l source_mode (
-        __pkg_main_menu | fzf \
+    set -l all_pkgs "󰏗  All Repositories" (pacman -Sl | awk '!/\[installed\]$/ {print $2}')
+
+    set -l pkgs (
+        printf "%s\n" $all_pkgs | fzf --multi \
             $FZF_COLORS \
-            --height 25% \
+            (__pkg_preview pacman) \
+            --height 60% \
             --layout reverse \
             --border rounded \
-            --prompt=" Action > " \
+            --prompt="󰮯 Pacman > " \
             --pointer="" \
-            --header="Select Action"
+            --marker="󰄬" \
+            --header=" Select packages "
     )
 
-    test -z "$source_mode"; and return
+    test -z "$pkgs"; and return
 
-    switch $source_mode
-        case "*Update*"
-            sudo pacman -Syu --noconfirm --color=always
-
-        case "*Pacman*"
-            __pkg_pacman_menu "$FZF_COLORS"
-
-        case "*All*"
+    switch $pkgs[1]
+        case "*All Repositories*"
             __pkg_need_yay; or return 1
             __pkg_aur_cache "$cache_file"
 
             set -l official_pkgs (pacman -Sl | awk '!/\[installed\]$/ {print $2}')
             set -l aur_pkgs (cat "$cache_file")
 
-            set -l all_pkgs (
-                printf "%s\n" $official_pkgs $aur_pkgs | sort -u
+            set -l all "󰇚  Update" "󰅙  Uninstall" (
+                for pkg in $official_pkgs; echo "󰮯 $pkg"; end
+                for pkg in $aur_pkgs; echo "󰣇 $pkg"; end
             )
 
             set -l pkgs (
-                printf "%s\n" $all_pkgs | fzf --multi \
+                printf "%s\n" $all | fzf --multi \
                     $FZF_COLORS \
-                    (__pkg_preview all) \
+                    --preview 'pacman -Si (echo {1} | sed "s/^[󰖠|󰣟] //") 2>/dev/null || yay -Si (echo {1} | sed "s/^[󰖠|󰣟] //") 2>/dev/null' \
+                    --preview-window='right:60%:wrap' \
                     --height 60% \
                     --layout reverse \
                     --border rounded \
                     --prompt="󰏗 All Repos > " \
                     --pointer="" \
-                    --marker="󰄬"
+                    --marker="󰄬" \
+                    --header=" Select packages "
             )
 
-            if test -n "$pkgs"
-                __pkg_selected "PACKAGES SELECTED" 9876aa 9876aa $pkgs
-                __pkg_yay_install $pkgs
+            test -z "$pkgs"; and return
+
+            switch $pkgs[1]
+                case "*Update*"
+                    sudo pacman -Syu --noconfirm --color=always
+
+                case "*Uninstall*"
+                    set -l remove_pkgs (
+                        pacman -Qe | awk '{print $1}' | fzf --multi \
+                            $UNINSTALL_COLORS \
+                            (__pkg_preview uninstall) \
+                            --height 60% \
+                            --layout reverse \
+                            --border rounded \
+                            --prompt="󰅙 Uninstall > " \
+                            --pointer="" \
+                            --marker="✗" \
+                            --header=" Select packages to REMOVE "
+                    )
+
+                    if test -n "$remove_pkgs"
+                        __pkg_selected "PACKAGES MARKED FOR DELETION" ff6b68 ff6b68 $remove_pkgs
+                        sudo pacman -Rns --noconfirm $remove_pkgs
+                    end
+
+                case "*"
+                    set -l real_pkgs (printf "%s\n" $pkgs | grep -v "^󰇚" | grep -v "^󰅙" | sed 's/^[󰮯|󰣇] //')
+                    if test -n "$real_pkgs"
+                        __pkg_selected "PACKAGES SELECTED" 9876aa 9876aa $real_pkgs
+                        __pkg_yay_install $real_pkgs
+                    end
             end
 
-        case "*Yay*"
-            __pkg_yay_menu "$FZF_COLORS" "$cache_file"
-
-        case "*Uninstall*"
-            set -l pkgs (
-                pacman -Qe | awk '{print $1}' | fzf --multi \
-                    $UNINSTALL_COLORS \
-                    (__pkg_preview uninstall) \
-                    --height 60% \
-                    --layout reverse \
-                    --border rounded \
-                    --prompt="󰅙 Uninstall > " \
-                    --pointer="" \
-                    --marker="✗" \
-                    --header="Select packages to REMOVE"
-            )
-
-            if test -n "$pkgs"
-                __pkg_selected "PACKAGES MARKED FOR DELETION" ff6b68 ff6b68 $pkgs
-                sudo pacman -Rns --noconfirm $pkgs
+        case "*"
+            set -l real_pkgs (printf "%s\n" $pkgs | grep -v "^󰏗")
+            if test -n "$real_pkgs"
+                __pkg_selected "PACKAGES SELECTED" cc7832 6a8759 $real_pkgs
+                sudo pacman -S --noconfirm --color=always $real_pkgs
             end
     end
 end
